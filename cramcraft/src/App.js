@@ -44,6 +44,35 @@ const App = () => {
       </div>
     );
   }
+  //Note input
+  if (view === 'input') {
+    return (
+      <div className="min-h-screen bg-slate-100 p-8">
+        <div className="max-w-4xl mx-auto">
+          <header className="flex justify-between items-center mb-10">
+            <h1 className="text-2xl font-bold text-brand-dark underline decoration-brand-teal">CramCraft.dashboard</h1>
+            <button onClick={() => setView('landing')} className="text-gray-500">Exit</button>
+          </header>
+          
+          <div className="bg-white rounded-3xl p-10 shadow-sm border border-slate-200">
+            <h2 className="text-3xl font-bold mb-2">Ready to Craft?</h2>
+            <p className="text-gray-500 mb-6">Paste your lecture notes or PDF text below to generate your game.</p>
+            
+            <textarea 
+              className="w-full h-64 p-6 border-2 border-dashed border-slate-300 rounded-2xl focus:border-brand-teal outline-none transition-colors"
+              placeholder="Example: Big O notation describes the execution time of an algorithm..."
+            />
+            
+            <div className="mt-8 flex justify-end">
+              <button className="bg-brand-dark text-white px-8 py-3 rounded-xl font-bold hover:bg-black transition-colors">
+                Start Study Session →
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
 };
 
