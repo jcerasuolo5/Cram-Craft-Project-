@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, {useState} from 'react';
+import {motion} from 'framer-motion';
 
 const App = () => {
   //landing page phase
@@ -10,7 +11,7 @@ const App = () => {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
         <h1 className="text-6xl font-extrabold text-brand-dark mb-4">CramCraft</h1>
-        <p className="text-xl text-gray-600 mb-8 max-w-md">Turn your notes into mastery. The ultimate study engine for CS students.</p>
+        <p className="text-xl text-gray-600 mb-8 max-w-md">Turn your notes into mastery. The ultimate study engine for students.</p>
         <button 
           onClick={() => setView('auth')}
           className="bg-brand-teal text-white px-10 py-4 rounded-full font-bold text-lg shadow-lg hover:scale-105 transition-transform"
@@ -75,5 +76,14 @@ const App = () => {
   }
 
 };
+//Flashcard logic
+const StudySession = ({onFinish}) => {
+  const [isFlipped, setIsFlipped] = useState(false);
+  const [currentCard, setCurrentCard] = useState(0);
+  const cards = [
+    { q: "Test Question 1", a: "Test Answer 1" },
+    { q: "Test Question 2", a: "Test Answer 2" }
+  ];
+}  
 
 export default App;
