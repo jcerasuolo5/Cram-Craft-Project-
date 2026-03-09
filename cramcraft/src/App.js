@@ -84,6 +84,14 @@ const StudySession = ({onFinish}) => {
     { q: "Test Question 1", a: "Test Answer 1" },
     { q: "Test Question 2", a: "Test Answer 2" }
   ];
-}  
+  const handleNext = () => {
+    setIsFlipped(false);
+    if (currentCard < cards.length - 1) {
+      setCurrentCard(currentCard + 1);
+    } else {
+      onFinish(); // Triggers the "Continue or Leave" choice
+    }
+}
+};  
 
 export default App;
