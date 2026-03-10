@@ -89,7 +89,7 @@ const StudySession = ({onFinish}) => {
     if (currentCard < cards.length - 1) {
       setCurrentCard(currentCard + 1);
     } else {
-      onFinish(); // Triggers the "Continue or Leave" choice
+      onFinish(); //Triggers the choice
     }
 }
 };  
