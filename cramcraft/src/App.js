@@ -6,7 +6,7 @@ const App = () => {
   const [view, setView] = useState('landing');
   const [isNewUser, setIsNewUser] = useState(true);
 
-  // Welcome section
+  //Welcome section
   if (view === 'landing') {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
