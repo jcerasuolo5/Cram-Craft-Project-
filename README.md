@@ -2,9 +2,9 @@
 A study tool that uses different study methods to help students better prepare for class. Need to cram? Let CramCraft "craft" your success!
 
 # Team Members
-Jasmine Cerasuolo
-Ashley Leon Cuatlayotl
-John Yohannan
+- Jasmine Cerasuolo
+- Ashley Leon Cuatlayotl
+- John Yohannan
 
 # The Idea
 Unlike traditional study tools, CramCraft focuses on a high-speed "Input-to-Game" loop. We minimize the friction between having notes and starting a study session.
@@ -12,6 +12,7 @@ Unlike traditional study tools, CramCraft focuses on a high-speed "Input-to-Game
 # User Flow
 Our application logic follows a strict "Game Loop" design to ensure maximum engagement and ease of use.
 
+## Flow
 1. Entry: User arrives at the landing page and is prompted to log in or sign up.
 2. Authentication: New users create accounts; returning users log in to access their history.
 3. The Crafting Stage: Users input raw study materials (text/files) to generate a study set.
