@@ -32,3 +32,22 @@ Our application logic follows a strict "Game Loop" design to ensure maximum enga
 - Backend: Node.js, Express
 - Database: PostgreSQL/Supbase (currently a proposal, not yet implemented)
 - Animations: Framer Motion
+
+## Supabase Integration
+
+This project is now wired to use Supabase for authentication and future data storage.
+
+### Setup
+1. Copy `cramcraft/.env.example` to `cramcraft/.env.local`.
+2. In the Supabase dashboard for project **ipspkgqkzaoivbggjrpm**, go to **Settings → API** and copy the **anon key**.
+3. Paste the anon key into `REACT_APP_SUPABASE_ANON_KEY`.
+
+### Dev run
+From `cramcraft/`:
+
+```bash
+npm install
+npm start
+```
+
+Once the app is running, you can sign up/login using the Supabase auth flow.
