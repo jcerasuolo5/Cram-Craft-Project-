@@ -30,7 +30,7 @@ Our application logic follows a strict "Game Loop" design to ensure maximum enga
 # Current Tech Stack
 - Frontend: React.js, Tailwind CSS
 - Backend: Node.js, Express
-- Database: PostgreSQL/Supbase (currently a proposal, not yet implemented)
+- Database: Supabase
 - Animations: Framer Motion
 
 ## Supabase Integration
