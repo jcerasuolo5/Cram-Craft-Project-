@@ -1,3 +1,59 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Custom brand colors */
+:root {
+  --brand-teal: #00d4aa;
+  --brand-dark: #1a202c;
+  --brand-blue-light: #3b82f6;
+  --brand-blue-dark: #1e40af;
+  --brand-purple: #8b5cf6;
+}
+
+/* Custom utility classes */
+.bg-brand-teal {
+  background-color: var(--brand-teal);
+}
+
+.text-brand-teal {
+  color: var(--brand-teal);
+}
+
+.text-brand-dark {
+  color: var(--brand-dark);
+}
+
+.decoration-brand-teal {
+  text-decoration-color: var(--brand-teal);
+}
+
+.border-brand-teal {
+  border-color: var(--brand-teal);
+}
+
+.focus\:border-brand-teal:focus {
+  border-color: var(--brand-teal);
+}
+
+/* Blue gradient backgrounds */
+.bg-blue-gradient {
+  background: linear-gradient(135deg, var(--brand-blue-light) 0%, var(--brand-blue-dark) 100%);
+}
+
+.bg-blue-purple-gradient {
+  background: linear-gradient(135deg, var(--brand-blue-light) 0%, var(--brand-purple) 50%, var(--brand-blue-dark) 100%);
+}
+
+/* Enhanced button styles */
+.btn-primary {
+  @apply bg-blue-gradient text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200;
+}
+
+.btn-secondary {
+  @apply bg-white text-brand-dark px-6 py-3 rounded-xl font-bold border-2 border-brand-teal hover:bg-brand-teal hover:text-white transition-all duration-200;
+}
+
+.btn-ghost {
+  @apply text-gray-500 hover:text-gray-700 transition-colors;
+}
