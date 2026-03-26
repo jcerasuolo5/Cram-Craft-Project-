@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import './App.css';
 import { motion } from 'framer-motion';
 import { supabase } from './lib/supabaseClient';
+import Calendar from 'react-calendar';
+import 'react-calendar/dist/Calendar.css';
 
 const App = () => {
   // landing page phase
@@ -17,6 +19,17 @@ const App = () => {
   const [loading, setLoading] = useState(false);
   const [session, setSession] = useState(null);
 
+  // Dashboard data
+  const [pastSessions, setPastSessions] = useState([]);
+  const [streakData, setStreakData] = useState({ currentStreak: 0, totalDays: 0, longestStreak: 0 });
+  const [testDates, setTestDates] = useState([]);
+  const [newTestDate, setNewTestDate] = useState('');
+  const [newTestSubject, setNewTestSubject] = useState('');
+  const [notes, setNotes] = useState('');
+  const [selectedSession, setSelectedSession] = useState(null);
+  const [editingEvent, setEditingEvent] = useState(null);
+  const [notifications, setNotifications] = useState([]);
+
   useEffect(() => {
     let listener;
 
@@ -26,6 +39,7 @@ const App = () => {
 
       if (data.session) {
         setView('input');
+        fetchDashboardData();
       }
     };
 
@@ -33,7 +47,10 @@ const App = () => {
 
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      if (session) setView('input');
+      if (session) {
+        setView('input');
+        fetchDashboardData();
+      }
     });
 
     listener = authListener;
@@ -72,26 +89,159 @@ const App = () => {
     setMessage('');
   };
 
-  // Welcome section
-  if (view === 'landing') {
-    return (
-      <div className="app-page app-page--landing">
-        <header className="landing-header">
-          <div className="landing-header__logo">CramCraft</div>
-          <nav className="landing-nav">
-            <button
-              className="landing-nav__link"
-              onClick={() => {
-                setView('landing');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
-            >
-              Home
-            </button>
+  const fetchDashboardData = async () => {
+    if (!session?.user?.id) return;
+
+    // Fetch past sessions
+    const { data: sessions } = await supabase
+      .from('study_sessions')
+      .select('*')
+      .eq('user_id', session.user.id)
+      .order('date', { ascending: false });
+
+    setPastSessions(sessions || []);
+
+    // Compute and update streaks
+    const newStreaks = computeStreaks(sessions || []);
+    await supabase
+      .from('streaks')
+      .upsert([{ user_id: session.user.id, ...newStreaks, last_study_date: new Date().toISOString().split('T')[0] }]);
+    setStreakData(newStreaks);
+
+    // Fetch test dates
+    const { data: dates } = await supabase
+      .from('test_dates')
+      .select('*')
+      .eq('user_id', session.user.id)
+      .order('date', { ascending: true });
+
+    setTestDates(dates || []);
+    generateNotifications(dates || []);
+  };
+
+  const startStudySession = async () => {
+    if (!notes.trim()) return;
+
+    const today = new Date().toISOString().split('T')[0];
+    const duration = '45 min'; // Placeholder
+
+    const { error } = await supabase
+      .from('study_sessions')
+      .insert([{ user_id: session.user.id, date: today, topic: notes.substring(0, 50), duration, notes }]);
+
+    if (!error) {
+      setNotes('');
+      fetchDashboardData();
+    }
+  };
+
+  const addTestDate = async () => {
+    if (!newTestDate || !newTestSubject) return;
+
+    const { error } = await supabase
+      .from('test_dates')
+      .insert([{ user_id: session.user.id, date: newTestDate, subject: newTestSubject }]);
+
+    if (!error) {
+      setNewTestDate('');
+      setNewTestSubject('');
+      fetchDashboardData();
+    }
+  };
+
+  const deleteTestDate = async (id) => {
+    await supabase.from('test_dates').delete().eq('id', id);
+    fetchDashboardData();
+  };
+
+  const computeStreaks = (sessions) => {
+    if (!sessions.length) return { currentStreak: 0, totalDays: 0, longestStreak: 0 };
+
+    const dates = [...new Set(sessions.map(s => s.date))].sort();
+    let currentStreak = 0;
+    let longestStreak = 0;
+    let tempStreak = 1;
+
+    for (let i = dates.length - 1; i >= 0; i--) {
+      const current = new Date(dates[i]);
+      const next = i > 0 ? new Date(dates[i - 1]) : null;
+
+      if (next && (current - next) / (1000 * 60 * 60 * 24) === 1) {
+        tempStreak++;
+      } else {
+        if (i === dates.length - 1) currentStreak = tempStreak;
+        longestStreak = Math.max(longestStreak, tempStreak);
+        tempStreak = 1;
+      }
+    }
+    longestStreak = Math.max(longestStreak, tempStreak);
+
+    return {
+      currentStreak,
+      totalDays: dates.length,
+      longestStreak
+    };
+  };
+
+  const updateStreaks = async (sessions) => {
+    const newStreaks = computeStreaks(sessions);
+    await supabase
+      .from('streaks')
+      .upsert([{ user_id: session.user.id, ...newStreaks, last_study_date: new Date().toISOString().split('T')[0] }]);
+    setStreakData(newStreaks);
+  };
+
+  const generateNotifications = (testDates) => {
+    const today = new Date();
+    const upcoming = testDates.filter(event => {
+      const eventDate = new Date(event.date);
+      const diff = (eventDate - today) / (1000 * 60 * 60 * 24);
+      return diff >= 0 && diff <= 7; // Within 7 days
+    });
+    setNotifications(upcoming);
+  };
+
+  const editTestDate = async () => {
+    if (!editingEvent || !newTestDate || !newTestSubject) return;
+
+    await supabase
+      .from('test_dates')
+      .update({ date: newTestDate, subject: newTestSubject })
+      .eq('id', editingEvent.id);
+
+    setEditingEvent(null);
+    setNewTestDate('');
+    setNewTestSubject('');
+    fetchDashboardData();
+  };
+
+  return (
+    <>
+      <header className="landing-header">
+        <div className="landing-header__logo">CramCraft</div>
+        <nav className="landing-nav">
+          <button
+            className="landing-nav__link"
+            onClick={() => {
+              setView('landing');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+          >
+            Home
+          </button>
+          {session ? (
+            <>
+              <button className="landing-nav__link" onClick={() => setView('input')}>Dashboard</button>
+              <button onClick={handleSignOut} className="landing-nav__link">Sign Out</button>
+            </>
+          ) : (
             <button className="landing-nav__link" onClick={() => setView('auth')}>Login</button>
-            <button className="landing-nav__link" onClick={() => setView('input')}>Dashboard</button>
-          </nav>
-        </header>
+          )}
+        </nav>
+      </header>
+
+      {view === 'landing' && (
+        <div className="app-page app-page--landing">
 
         <motion.section
           id="landing-hero"
@@ -124,23 +274,35 @@ const App = () => {
             </div>
           </div>
 
-          <div className="landing-feature-grid">
-            <div className="feature-card">
+          <motion.div
+            className="landing-feature-grid"
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.2 }}
+            transition={{ duration: 0.55 }}
+          >
+            <motion.div className="feature-card" whileHover={{ y: -4 }} transition={{ duration: 0.2 }}>
               <h3>Instant flashcards</h3>
               <p>Transform your lecture notes into bite-sized questions in seconds.</p>
-            </div>
-            <div className="feature-card">
+            </motion.div>
+            <motion.div className="feature-card" whileHover={{ y: -4 }} transition={{ duration: 0.2 }}>
               <h3>Smart review</h3>
               <p>Adaptive spacing helps you remember longer and retain deeper understanding.</p>
-            </div>
-            <div className="feature-card">
+            </motion.div>
+            <motion.div className="feature-card" whileHover={{ y: -4 }} transition={{ duration: 0.2 }}>
               <h3>Track progress</h3>
               <p>Daily streaks, mastery score, and performance insights that keep you on track.</p>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         </motion.section>
 
-        <section className="landing-more">
+        <motion.section
+          className="landing-more"
+          initial={{ opacity: 0, y: 40 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.25 }}
+          transition={{ duration: 0.6 }}
+        >
           <div className="landing-more__inner">
             <article>
               <h2>Everything you need in one study dashboard</h2>
@@ -164,19 +326,16 @@ const App = () => {
               </div>
             </div>
           </div>
-        </section>
+        </motion.section>
 
         <footer className="landing-footer">
           <p>© {new Date().getFullYear()} CramCraft. Built for student success.</p>
         </footer>
       </div>
-    );
-  }
+      )}
 
-  // Log in/Signup section
-  if (view === 'auth') {
-    return (
-      <div className="app-page app-page--auth">
+      {view === 'auth' && (
+        <div className="app-page app-page--auth">
         <motion.div
           className="app-card app-card--form"
           initial={{ opacity: 0, scale: 0.9 }}
@@ -229,57 +388,164 @@ const App = () => {
           </p>
         </motion.div>
       </div>
-    );
-  }
+      )}
 
-  // Note input
-  if (view === 'input') {
-    return (
-      <div className="app-page app-page--dashboard">
+      {view === 'input' && (
+        <div className="app-page app-page--dashboard">
         <div className="dashboard-shell">
-          <motion.header
-            className="dashboard-header"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-          >
-            <h1 className="dashboard-title">CramCraft.dashboard</h1>
-            <div className="dashboard-actions">
-              {session?.user?.email ? (
-                <span className="dashboard-user">{session.user.email}</span>
-              ) : null}
-              <button onClick={handleSignOut} className="btn btn-ghost">
-                Sign out
-              </button>
-            </div>
-          </motion.header>
+          <div className="dashboard-grid">
+            <motion.div
+              className="app-card app-card--past-sessions"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+            >
+              <h3 className="app-heading">Past Sessions</h3>
+              <div className="past-sessions-list">
+                {pastSessions.map(session => (
+                  <div key={session.id} className="past-session-item" onClick={() => setSelectedSession(session)}>
+                    <div className="session-date">{session.date}</div>
+                    <div className="session-topic">{session.topic}</div>
+                    <div className="session-duration">{session.duration}</div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
 
-          <motion.div
-            className="app-card app-card--dashboard"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-          >
-            <h2 className="app-heading">Ready to Craft?</h2>
-            <p className="app-text">
-              Paste your lecture notes or PDF text below to generate your game.
-            </p>
+            <motion.div
+              className="app-card app-card--streaks"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.6 }}
+            >
+              <h3 className="app-heading">Study Streaks</h3>
+              <div className="streaks-stats">
+                <div className="streak-stat">
+                  <span className="stat-number">{streakData.currentStreak}</span>
+                  <span className="stat-label">Current Streak</span>
+                </div>
+                <div className="streak-stat">
+                  <span className="stat-number">{streakData.totalDays}</span>
+                  <span className="stat-label">Total Days</span>
+                </div>
+                <div className="streak-stat">
+                  <span className="stat-number">{streakData.longestStreak}</span>
+                  <span className="stat-label">Longest Streak</span>
+                </div>
+              </div>
+            </motion.div>
 
-            <textarea
-              className="w-full h-64 p-6 border-2 border-dashed border-gray-300 rounded-2xl focus:border-brand-teal outline-none transition-colors bg-gray-50/50"
-              placeholder="Example: Big O notation describes the execution time of an algorithm..."
-            />
+            <motion.div
+              className="app-card app-card--calendar"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.8 }}
+            >
+              <h3 className="app-heading">Upcoming Tests</h3>
+              <Calendar
+                value={new Date()}
+                tileContent={({ date, view }) => {
+                  if (view === 'month') {
+                    const dateStr = date.toISOString().split('T')[0];
+                    const event = testDates.find(d => d.date === dateStr);
+                    return event ? <div className="calendar-event-marker" onClick={() => setEditingEvent(event)}>{event.subject}</div> : null;
+                  }
+                }}
+              />
+              <div className="add-test-form">
+                <input
+                  type="date"
+                  value={newTestDate}
+                  onChange={(e) => setNewTestDate(e.target.value)}
+                  className="w-full p-2 border rounded mb-2"
+                />
+                <input
+                  type="text"
+                  value={newTestSubject}
+                  onChange={(e) => setNewTestSubject(e.target.value)}
+                  placeholder="Subject"
+                  className="w-full p-2 border rounded mb-2"
+                />
+                <button onClick={addTestDate} className="btn btn-secondary">Add Test Date</button>
+              </div>
+              <div className="test-dates-list">
+                {testDates.map(event => (
+                  <div key={event.id} className="test-date-item">
+                    <span>{event.date}: {event.subject}</span>
+                    <button onClick={() => deleteTestDate(event.id)} className="btn-delete">×</button>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
 
-            <div className="mt-8 flex justify-end">
-              <button className="btn-primary">
-                Start Study Session →
-              </button>
-            </div>
-          </motion.div>
+            <motion.div
+              className="app-card app-card--dashboard"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.8 }}
+            >
+              <h2 className="app-heading">Ready to Craft?</h2>
+              <p className="app-text">
+                Paste your lecture notes or PDF text below to generate your game.
+              </p>
+
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                className="w-full h-64 p-6 border-2 border-dashed border-gray-300 rounded-2xl focus:border-brand-teal outline-none transition-colors bg-gray-50/50"
+                placeholder="Example: Big O notation describes the execution time of an algorithm..."
+              />
+
+              <div className="mt-8 flex justify-end">
+                <button onClick={startStudySession} className="btn-primary">
+                  Start Study Session →
+                </button>
+              </div>
+            </motion.div>
+          </div>
+
+          {notifications.length > 0 && (
+            <motion.div
+              className="notifications"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <h3>Upcoming Tests (Next 7 Days)</h3>
+              {notifications.map(event => (
+                <div key={event.id} className="notification-item">
+                  {event.subject} on {event.date}
+                </div>
+              ))}
+            </motion.div>
+          )}
+
+          {selectedSession && (
+            <motion.div
+              className="modal-overlay"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              onClick={() => setSelectedSession(null)}
+            >
+              <motion.div
+                className="modal-content"
+                initial={{ scale: 0.9 }}
+                animate={{ scale: 1 }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <h3>{selectedSession.topic}</h3>
+                <p><strong>Date:</strong> {selectedSession.date}</p>
+                <p><strong>Duration:</strong> {selectedSession.duration}</p>
+                <p><strong>Notes:</strong></p>
+                <pre>{selectedSession.notes}</pre>
+                <button onClick={() => setSelectedSession(null)} className="btn btn-secondary">Close</button>
+              </motion.div>
+            </motion.div>
+          )}
         </div>
       </div>
-    );
-  }
+      )}
+    </>
+  );
 };
 
 export default App;
