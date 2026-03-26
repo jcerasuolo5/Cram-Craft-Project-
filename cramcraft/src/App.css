@@ -41,7 +41,36 @@ html,
   text-align: center;
   align-items: flex-start;
   justify-content: flex-start;
+  flex-direction: column;
   padding-top: 100px;
+  gap: 1.25rem;
+}
+
+.app-card--hero {
+  color: var(--text-dark);
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 24px 42px rgba(15, 23, 42, 0.24);
+}
+
+.app-card--hero .app-title {
+  color: #07152f;
+}
+
+.app-card--hero .app-subtitle {
+  color: #334155;
+  font-weight: 500;
+}
+
+.app-card--hero .landing-social-proof,
+.app-card--hero .landing-actions,
+.app-card--hero .landing-secondary-cta {
+  color: #0f172a;
+}
+
+.landing-social-proof {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #0f172a;
 }
 
 .landing-header {
@@ -188,27 +217,7 @@ html,
   animation: animatedGradient 14s ease infinite;
 }
 
-.landing-header {
-  position: sticky;
-  top: 0;
-  width: min(100%, 1200px);
-  z-index: 50;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem 1.5rem;
-  background: rgba(10, 12, 30, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 999px;
-  backdrop-filter: blur(14px);
-  margin-bottom: 1rem;
-}
-
-.landing-header__logo {
-  color: #eff6ff;
-  font-size: 1.2rem;
-  font-weight: 800;
-}
+/* Removed old sticky header styles; fixed header is defined earlier */
 
 .landing-nav {
   display: flex;
@@ -234,11 +243,18 @@ html,
 .landing-visual-section {
   display: grid;
   gap: 1rem;
-  grid-template-columns: minmax(0, 240px) 1fr;
+  grid-template-columns: 1fr;
   align-items: center;
   justify-content: center;
   margin: 0 auto 1.25rem;
-  max-width: 740px;
+  max-width: 720px;
+}
+
+@media (min-width: 980px) {
+  .landing-visual-section {
+    grid-template-columns: 1fr 1fr;
+    align-items: flex-start;
+  }
 }
 
 .landing-visual {
@@ -343,6 +359,63 @@ html,
 .feature-card p {
   margin: 0;
   color: #475569;
+}
+
+.landing-more {
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 24px;
+  margin-top: 2rem;
+  padding: 1.5rem;
+  max-width: 960px;
+  width: min(960px, 100%);
+}
+
+.landing-more__inner {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.landing-more h2 {
+  margin: 0;
+  font-size: clamp(1.5rem, 2vw, 2rem);
+  color: #0f172a;
+}
+
+.landing-more p {
+  margin: 0.65rem 0 0;
+  color: #334155;
+}
+
+.landing-more-grid {
+  display: grid;
+  gap: 0.9rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  margin-top: 1rem;
+}
+
+.landing-card {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 14px;
+  padding: 1rem;
+  box-shadow: 0 12px 20px rgba(15, 23, 42, 0.04);
+}
+
+.landing-card h3 {
+  margin: 0 0 0.4rem;
+  color: #0f172a;
+}
+
+.landing-card p {
+  margin: 0;
+  color: #475569;
+}
+
+.landing-footer {
+  text-align: center;
+  margin-top: 1.75rem;
+  color: #e2e8f0;
+  font-size: 0.95rem;
 }
 
 .app-page--auth,

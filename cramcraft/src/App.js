@@ -79,34 +79,32 @@ const App = () => {
         <header className="landing-header">
           <div className="landing-header__logo">CramCraft</div>
           <nav className="landing-nav">
-            <button className="landing-nav__link" onClick={() => setView('landing')}>Home</button>
+            <button
+              className="landing-nav__link"
+              onClick={() => {
+                setView('landing');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+            >
+              Home
+            </button>
             <button className="landing-nav__link" onClick={() => setView('auth')}>Login</button>
             <button className="landing-nav__link" onClick={() => setView('input')}>Dashboard</button>
           </nav>
         </header>
 
         <motion.section
+          id="landing-hero"
           className="app-card app-card--hero"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
         >
-          <img src="/logo192.png" alt="CramCraft logo" className="landing-logo" />
+          <img src="/logo.png" alt="CramCraft logo" className="landing-logo" />
           <h1 className="app-title">Study Smarter, Not Harder</h1>
           <p className="app-subtitle">
             Convert your notes into adaptive flashcards, track mastery, and stay motivated with science-backed study streaks.
           </p>
-
-          <div className="landing-visual-section">
-            <img src="/logo192.png" alt="App preview" className="landing-visual" />
-            <div className="landing-social-proof">
-              <span>Trusted by 1,400+ students</span>
-              <div className="landing-testimonials">
-                <blockquote>“Saved me 3 hours a week and boosted my exam score.” – Ana S.</blockquote>
-                <blockquote>“Finally, a study tool that actually adapts to me.” – Jordan L.</blockquote>
-              </div>
-            </div>
-          </div>
 
           <div className="landing-actions">
             <button onClick={() => setView('auth')} className="btn btn-primary btn-cta">Get Started</button>
@@ -115,6 +113,16 @@ const App = () => {
           <p className="landing-secondary-cta">
             Already have an account? <button className="landing-login-link" onClick={() => setView('auth')}>Log in</button>
           </p>
+
+          <div className="landing-visual-section">
+            <img src="/logo192.png" alt="App preview" className="landing-visual" />
+            <div className="landing-social-proof">
+              <span>Trusted by students</span>
+              <div className="landing-testimonials">
+                <blockquote>“Finally, a study tool that actually adapts to my students.” – Mehdi P.</blockquote>
+              </div>
+            </div>
+          </div>
 
           <div className="landing-feature-grid">
             <div className="feature-card">
@@ -131,6 +139,36 @@ const App = () => {
             </div>
           </div>
         </motion.section>
+
+        <section className="landing-more">
+          <div className="landing-more__inner">
+            <article>
+              <h2>Everything you need in one study dashboard</h2>
+              <p>
+                CramCraft automatically creates review queues, scores your streaks, and lets you save cards for later.
+              </p>
+            </article>
+
+            <div className="landing-more-grid">
+              <div className="landing-card">
+                <h3>Workflows in seconds</h3>
+                <p>Paste notes, generate questions, and start reviewing in under a minute.</p>
+              </div>
+              <div className="landing-card">
+                <h3>AI-powered context</h3>
+                <p>Flashcards adapt to difficulty and topic so you study what matters most.</p>
+              </div>
+              <div className="landing-card">
+                <h3>Focus on retention</h3>
+                <p>Built-in adaptive spacing helps you remember more and stress less.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <footer className="landing-footer">
+          <p>© {new Date().getFullYear()} CramCraft. Built for student success.</p>
+        </footer>
       </div>
     );
   }
