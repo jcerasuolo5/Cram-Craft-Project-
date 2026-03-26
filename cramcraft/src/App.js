@@ -85,37 +85,52 @@ const App = () => {
           </nav>
         </header>
 
-        <motion.div
+        <motion.section
           className="app-card app-card--hero"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
         >
           <img src="/logo192.png" alt="CramCraft logo" className="landing-logo" />
-          <h1 className="app-title">CramCraft</h1>
+          <h1 className="app-title">Study Smarter, Not Harder</h1>
           <p className="app-subtitle">
-            Turn your notes into mastery. The ultimate study engine for students.
+            Convert your notes into adaptive flashcards, track mastery, and stay motivated with science-backed study streaks.
           </p>
-          <div className="landing-actions">
-            <button onClick={() => setView('auth')} className="btn btn-primary">Get Started</button>
-            <button onClick={() => setView('auth')} className="btn btn-secondary">Log In</button>
+
+          <div className="landing-visual-section">
+            <img src="/logo192.png" alt="App preview" className="landing-visual" />
+            <div className="landing-social-proof">
+              <span>Trusted by 1,400+ students</span>
+              <div className="landing-testimonials">
+                <blockquote>“Saved me 3 hours a week and boosted my exam score.” – Ana S.</blockquote>
+                <blockquote>“Finally, a study tool that actually adapts to me.” – Jordan L.</blockquote>
+              </div>
+            </div>
           </div>
+
+          <div className="landing-actions">
+            <button onClick={() => setView('auth')} className="btn btn-primary btn-cta">Get Started</button>
+          </div>
+
+          <p className="landing-secondary-cta">
+            Already have an account? <button className="landing-login-link" onClick={() => setView('auth')}>Log in</button>
+          </p>
 
           <div className="landing-feature-grid">
             <div className="feature-card">
-              <h3>Fast setup</h3>
-              <p>Sign up and jump straight into studying with AI-prompted flashcards.</p>
+              <h3>Instant flashcards</h3>
+              <p>Transform your lecture notes into bite-sized questions in seconds.</p>
             </div>
             <div className="feature-card">
-              <h3>Smart summaries</h3>
-              <p>Generate quick notes from long text and focus on what matters.</p>
+              <h3>Smart review</h3>
+              <p>Adaptive spacing helps you remember longer and retain deeper understanding.</p>
             </div>
             <div className="feature-card">
-              <h3>Progress track</h3>
-              <p>Score your sessions and improve by measuring streaks.</p>
+              <h3>Track progress</h3>
+              <p>Daily streaks, mastery score, and performance insights that keep you on track.</p>
             </div>
           </div>
-        </motion.div>
+        </motion.section>
       </div>
     );
   }

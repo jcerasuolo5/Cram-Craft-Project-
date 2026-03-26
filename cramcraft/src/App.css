@@ -39,8 +39,36 @@ html,
 .app-page--landing {
   color: var(--text-light);
   text-align: center;
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding-top: 100px;
+}
+
+.landing-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  z-index: 1000;
+  display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
+  padding: 0.8rem 1.5rem;
+  background: rgba(8, 11, 46, 0.82);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(14px);
+}
+
+.landing-header__logo {
+  color: #eff6ff;
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.landing-nav {
+  display: flex;
+  gap: 0.65rem;
 }
 
 .app-card {
@@ -203,11 +231,80 @@ html,
   background: rgba(255, 255, 255, 0.28);
 }
 
+.landing-visual-section {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 240px) 1fr;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.25rem;
+  max-width: 740px;
+}
+
+.landing-visual {
+  width: 100%;
+  max-width: 240px;
+  border-radius: 1rem;
+  box-shadow: 0 16px 30px rgba(10, 14, 35, 0.22);
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  background: #fff;
+}
+
+.landing-social-proof {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: 0.6rem;
+  color: #0f172a;
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 0.9rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+}
+
+.landing-social-proof span {
+  font-weight: 700;
+}
+
+.landing-testimonials blockquote {
+  margin: 0;
+  color: #334155;
+  font-size: 0.9rem;
+  line-height: 1.42;
+}
+
 .landing-actions {
   display: flex;
   gap: 0.9rem;
   justify-content: center;
   margin-top: 1.2rem;
+}
+
+.btn-cta {
+  width: 280px;
+  font-size: 1.02rem;
+  padding: 1rem 1.25rem;
+}
+
+.landing-secondary-cta {
+  margin-top: 0.9rem;
+  color: rgba(15, 23, 42, 0.8);
+  font-weight: 500;
+}
+
+.landing-login-link {
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+}
+
+.landing-login-link:hover {
+  color: #028f71;
 }
 
 .btn-secondary {
