@@ -13,6 +13,7 @@ const App = () => {
   // auth inputs
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
 
   // UI state
   const [message, setMessage] = useState('');
@@ -66,7 +67,15 @@ const App = () => {
 
     try {
       if (isNewUser) {
-        const { error } = await supabase.auth.signUp({ email, password });
+        const { error } = await supabase.auth.signUp({ 
+          email, 
+          password,
+          options: {
+            data: {
+              name: name
+            }
+          }
+        });
         if (error) throw error;
         setMessage('Check your inbox for a confirmation link (if required).');
       } else {
@@ -86,6 +95,7 @@ const App = () => {
     setView('landing');
     setEmail('');
     setPassword('');
+    setName('');
     setMessage('');
   };
 
@@ -350,29 +360,58 @@ const App = () => {
           </h2>
 
           <div className="space-y-4">
-            <input
+            {isNewUser && (
+              <motion.input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-brand-teal outline-none transition-colors"
+                placeholder="Full Name"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.4, delay: 0.1 }}
+              />
+            )}
+            <motion.input
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-brand-teal outline-none transition-colors"
               placeholder="Email Address"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.4, delay: isNewUser ? 0.2 : 0.1 }}
             />
-            <input
+            <motion.input
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-brand-teal outline-none transition-colors"
               type="password"
               placeholder="Password"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.4, delay: isNewUser ? 0.3 : 0.2 }}
             />
-            <button
+            <motion.button
               onClick={handleAuth}
-              disabled={loading || !email || !password}
+              disabled={loading || !email || !password || (isNewUser && !name)}
               className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: isNewUser ? 0.4 : 0.3 }}
             >
               {loading ? 'Working…' : isNewUser ? 'Sign Up' : 'Log In'}
-            </button>
+            </motion.button>
           </div>
 
-          {message ? <p className="mt-4 text-sm text-center text-red-500">{message}</p> : null}
+          {message ? (
+            <motion.p 
+              className="mt-4 text-sm text-center text-red-500"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              {message}
+            </motion.p>
+          ) : null}
 
           <p className="mt-6 text-sm text-center text-gray-500">
             {isNewUser ? 'Already have an account?' : 'New to CramCraft?'}{' '}
@@ -392,7 +431,12 @@ const App = () => {
 
       {view === 'input' && (
         <div className="app-page app-page--dashboard">
-        <div className="dashboard-shell">
+        <motion.div 
+          className="dashboard-shell"
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+        >
           <div className="dashboard-grid">
             <motion.div
               className="app-card app-card--past-sessions"
@@ -541,7 +585,7 @@ const App = () => {
               </motion.div>
             </motion.div>
           )}
-        </div>
+        </motion.div>
       </div>
       )}
     </>
