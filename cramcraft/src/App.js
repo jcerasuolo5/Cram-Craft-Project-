@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { supabase } from './lib/supabaseClient';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
+import Flashcards from './components/Flashcards';
 
 const App = () => {
   // landing page phase
@@ -242,6 +243,7 @@ const App = () => {
           {session ? (
             <>
               <button className="landing-nav__link" onClick={() => setView('input')}>Dashboard</button>
+              <button className="landing-nav__link" onClick={() => setView('flashcards')}>Flashcards</button>
               <button onClick={handleSignOut} className="landing-nav__link">Sign Out</button>
             </>
           ) : (
@@ -587,6 +589,13 @@ const App = () => {
           )}
         </motion.div>
       </div>
+      )}
+
+      {view === 'flashcards' && (
+        <Flashcards
+          notes={notes}
+          onBack={() => setView('input')}
+        />
       )}
     </>
   );

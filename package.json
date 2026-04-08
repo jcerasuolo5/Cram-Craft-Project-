@@ -1,4 +1,9 @@
 {
+  "scripts": {
+    "start": "cd cramcraft && npm start",
+    "build": "cd cramcraft && npm run build",
+    "test": "cd cramcraft && npm test"
+  },
   "devDependencies": {
     "autoprefixer": "^10.4.27",
     "postcss": "^8.5.6",
