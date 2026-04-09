@@ -11,7 +11,7 @@ const App = () => {
   const [view, setView] = useState('landing');
   const [isNewUser, setIsNewUser] = useState(true);
 
-  // auth inputs
+  // auth inputs - done in supabase
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
