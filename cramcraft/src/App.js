@@ -131,18 +131,30 @@ const App = () => {
   };
 
   const startStudySession = async () => {
-    if (!notes.trim()) return;
+    if (!notes.trim()) {
+      setMessage('Please enter or upload some notes first!');
+      setTimeout(() => setMessage(''), 3000);
+      return;
+    }
 
-    const today = new Date().toISOString().split('T')[0];
-    const duration = '45 min'; // Placeholder
+    // Navigate to flashcards immediately so the user isn't blocked
+    setView('flashcards');
 
-    const { error } = await supabase
-      .from('study_sessions')
-      .insert([{ user_id: session.user.id, date: today, topic: notes.substring(0, 50), duration, notes }]);
-
-    if (!error) {
-      setNotes('');
-      fetchDashboardData();
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const duration = '45 min'; // Placeholder
+  
+      const { error } = await supabase
+        .from('study_sessions')
+        .insert([{ user_id: session.user.id, date: today, topic: notes.substring(0, 50), duration, notes }]);
+  
+      if (!error) {
+        fetchDashboardData();
+      } else {
+        console.error('Failed to save study session to database:', error);
+      }
+    } catch (err) {
+      console.error('Unexpected error saving session:', err);
     }
   };
 
@@ -557,40 +569,44 @@ const App = () => {
             </motion.div>
 
             <motion.div
-              className="app-card app-card--dashboard"
+              className="app-card app-card--dashboard h-auto pb-6"
+              style={{ minHeight: 'fit-content' }}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.8 }}
             >
               <h2 className="app-heading">Ready to Craft?</h2>
-              <p className="app-text">
+              <p className="app-text mb-4">
                 Paste your lecture notes or PDF text below to generate your game.
               </p>
-
-              <div className="mb-4 flex items-center">
-                <label className="btn btn-secondary cursor-pointer inline-block mr-4">
-                  Upload File
-                  <input
-                    type="file"
-                    accept=".pdf,.txt"
-                    onChange={handleFileUpload}
-                    style={{ display: 'none' }}
-                  />
-                </label>
-                {message && <span className="text-sm font-medium text-brand-teal">{message}</span>}
-              </div>
 
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                className="w-full h-64 p-6 border-2 border-dashed border-gray-300 rounded-2xl focus:border-brand-teal outline-none transition-colors bg-gray-50/50"
+                className="w-full h-48 md:h-64 p-6 border-2 border-dashed border-gray-300 rounded-2xl focus:border-brand-teal outline-none transition-colors bg-gray-50/50 resize-y"
                 placeholder="Example: Big O notation describes the execution time of an algorithm..."
               />
 
-              <div className="mt-8 flex justify-end">
-                <button onClick={startStudySession} className="btn-primary">
-                  Start Study Session →
-                </button>
+              <div className="mt-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+                <div className="flex-1">
+                  {message && <span className="text-sm font-medium text-brand-teal">{message}</span>}
+                </div>
+                
+                <div className="flex items-center gap-4">
+                  <label className="btn btn-secondary text-sm px-4 py-2 cursor-pointer inline-block m-0">
+                    Upload File
+                    <input
+                      type="file"
+                      accept=".pdf,.txt"
+                      onChange={handleFileUpload}
+                      style={{ display: 'none' }}
+                    />
+                  </label>
+
+                  <button onClick={startStudySession} className="btn-primary m-0">
+                    Start Study Session →
+                  </button>
+                </div>
               </div>
             </motion.div>
           </div>
