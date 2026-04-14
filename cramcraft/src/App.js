@@ -29,7 +29,6 @@ const App = () => {
   const [newTestSubject, setNewTestSubject] = useState('');
   const [notes, setNotes] = useState('');
   const [selectedSession, setSelectedSession] = useState(null);
-  const [editingEvent, setEditingEvent] = useState(null);
   const [notifications, setNotifications] = useState([]);
 
   useEffect(() => {
@@ -60,6 +59,7 @@ const App = () => {
     return () => {
       listener?.subscription?.unsubscribe();
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleAuth = async () => {
@@ -194,14 +194,6 @@ const App = () => {
     };
   };
 
-  const updateStreaks = async (sessions) => {
-    const newStreaks = computeStreaks(sessions);
-    await supabase
-      .from('streaks')
-      .upsert([{ user_id: session.user.id, ...newStreaks, last_study_date: new Date().toISOString().split('T')[0] }]);
-    setStreakData(newStreaks);
-  };
-
   const generateNotifications = (testDates) => {
     const today = new Date();
     const upcoming = testDates.filter(event => {
@@ -212,18 +204,58 @@ const App = () => {
     setNotifications(upcoming);
   };
 
-  const editTestDate = async () => {
-    if (!editingEvent || !newTestDate || !newTestSubject) return;
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
 
-    await supabase
-      .from('test_dates')
-      .update({ date: newTestDate, subject: newTestSubject })
-      .eq('id', editingEvent.id);
+    setMessage('Processing file...');
+    try {
+      if (file.type === 'application/pdf') {
+        // Dynamically load PDF.js from CDN to bypass Webpack compilation issues entirely
+        const loadPdfJs = async () => {
+          if (window.pdfjsLib) return window.pdfjsLib;
+          return new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+            script.onload = () => {
+              window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+              resolve(window.pdfjsLib);
+            };
+            script.onerror = () => reject(new Error('Failed to load PDF.js'));
+            document.body.appendChild(script);
+          });
+        };
 
-    setEditingEvent(null);
-    setNewTestDate('');
-    setNewTestSubject('');
-    fetchDashboardData();
+        const pdfjsLib = await loadPdfJs();
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        let extractedText = '';
+        
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const textContent = await page.getTextContent();
+          const pageText = textContent.items.map(item => item.str).join(' ');
+          extractedText += pageText + '\n';
+        }
+        
+        setNotes(extractedText);
+        setMessage('PDF loaded successfully!');
+      } else if (file.type === 'text/plain') {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          setNotes(event.target.result);
+          setMessage('Text file loaded successfully!');
+        };
+        reader.readAsText(file);
+      } else {
+        setMessage('Unsupported file type. Please upload a PDF or Text file.');
+      }
+      setTimeout(() => setMessage(''), 3000);
+    } catch (error) {
+      console.error('Error reading file:', error);
+      setMessage('Error reading file. Could not parse PDF.');
+      setTimeout(() => setMessage(''), 5000);
+    }
   };
 
   return (
@@ -494,7 +526,7 @@ const App = () => {
                   if (view === 'month') {
                     const dateStr = date.toISOString().split('T')[0];
                     const event = testDates.find(d => d.date === dateStr);
-                    return event ? <div className="calendar-event-marker" onClick={() => setEditingEvent(event)}>{event.subject}</div> : null;
+                    return event ? <div className="calendar-event-marker">{event.subject}</div> : null;
                   }
                 }}
               />
@@ -534,6 +566,19 @@ const App = () => {
               <p className="app-text">
                 Paste your lecture notes or PDF text below to generate your game.
               </p>
+
+              <div className="mb-4 flex items-center">
+                <label className="btn btn-secondary cursor-pointer inline-block mr-4">
+                  Upload File
+                  <input
+                    type="file"
+                    accept=".pdf,.txt"
+                    onChange={handleFileUpload}
+                    style={{ display: 'none' }}
+                  />
+                </label>
+                {message && <span className="text-sm font-medium text-brand-teal">{message}</span>}
+              </div>
 
               <textarea
                 value={notes}
