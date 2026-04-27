@@ -456,24 +456,36 @@ html,
 
 .dashboard-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(3, 1fr); /* Force 3 columns */;
   gap: 1.5rem;
 }
+.app-card--dashboard.app-card--full-width {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  max-width: none;
+}
 
-@media (min-width: 768px) {
+@media (max-width: 1024px) {
   .dashboard-grid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr 1fr; /* 2 columns for tablets */
   }
 }
 
-@media (min-width: 1024px) {
+@media (max-width: 768px) {
   .dashboard-grid {
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: 1fr; /* 1 column for mobile */
+  }
+  
+  .app-card--dashboard {
+    grid-column: auto;
+    grid-row: auto;
   }
 }
 
 .app-card--dashboard {
-  grid-column: 1 / -1;
+  grid-column: 1 / -1; /* Stretch across all columns */
+  grid-row: 1;         /* Force it to the first row */
+  max-width: none;     /* Allow it to be wide */
 }
 
 .app-card--past-sessions,

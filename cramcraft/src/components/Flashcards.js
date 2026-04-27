@@ -10,14 +10,22 @@ const Flashcards = ({ notes, onBack }) => {
   // Generate flashcards from notes (simplified for now)
   useEffect(() => {
     if (notes) {
-      // Simple card generation - split by sentences and create Q&A pairs
-      const sentences = notes.split(/[.!?]+/).filter(s => s.trim().length > 10);
-      const generatedCards = sentences.slice(0, 10).map((sentence, index) => ({
-        id: index,
-        question: `What does this statement mean: "${sentence.trim()}"?`,
-        answer: sentence.trim(),
+      // 1. Try to split the string based on our custom labels
+      const questionMatch = notes.match(/Question: ([\s\S]*?)\nAnswer:/);
+      const answerMatch = notes.match(/Answer: ([\s\S]*)/);
+
+      // 2. Extract the text or use fallbacks if the format is wrong
+      const questionText = questionMatch ? questionMatch[1].trim() : "No question found";
+      const answerText = answerMatch ? answerMatch[1].trim() : notes;
+
+      // 3. Create a single card (or multiple if you expand this later)
+      const generatedCards = [{
+        id: 0,
+        question: questionText,
+        answer: answerText,
         difficulty: 'medium'
-      }));
+      }];
+
       setCards(generatedCards);
     }
   }, [notes]);
