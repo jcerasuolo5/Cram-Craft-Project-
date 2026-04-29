@@ -2,9 +2,9 @@
 A study tool that uses different study methods to help students better prepare for class. Need to cram? Let CramCraft "craft" your success!
 
 # Team Members
-- Jasmine Cerasuolo
-- Ashley Leon Cuatlayotl
-- John Yohannan
+- Jasmine Cerasuolo - https://github.com/jcerasuolo5 
+- Ashley Leon Cuatlayotl - https://github.com/ashleonc 
+- John Yohannan: https://github.com/yohannanjk
 
 # The Idea
 Unlike traditional study tools, CramCraft focuses on a high-speed "Input-to-Game" loop. We minimize the friction between having notes and starting a study session.
