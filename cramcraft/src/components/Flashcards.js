@@ -6,27 +6,40 @@ const Flashcards = ({ notes, onBack }) => {
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
   const [isFlipped, setIsFlipped] = useState(false);
+  const [cardHistory, setCardHistory] = useState([]);
 
-  // Generate flashcards from notes (simplified for now)
+  // Generate flashcards from notes (supports multiple cards)
   useEffect(() => {
     if (notes) {
-      // 1. Try to split the string based on our custom labels
-      const questionMatch = notes.match(/Question: ([\s\S]*?)\nAnswer:/);
-      const answerMatch = notes.match(/Answer: ([\s\S]*)/);
+      // Split by "---" to get multiple flashcards
+      const cardSections = notes.split('---').map(s => s.trim()).filter(s => s);
+      
+      const generatedCards = cardSections.map((section, index) => {
+        // Try to split the string based on our custom labels
+        const questionMatch = section.match(/Question: ([\s\S]*?)\nAnswer:/);
+        const answerMatch = section.match(/Answer: ([\s\S]*)/);
 
-      // 2. Extract the text or use fallbacks if the format is wrong
-      const questionText = questionMatch ? questionMatch[1].trim() : "No question found";
-      const answerText = answerMatch ? answerMatch[1].trim() : notes;
+        // Extract the text or use fallbacks if the format is wrong
+        const questionText = questionMatch ? questionMatch[1].trim() : "No question found";
+        const answerText = answerMatch ? answerMatch[1].trim() : section;
 
-      // 3. Create a single card (or multiple if you expand this later)
-      const generatedCards = [{
-        id: 0,
-        question: questionText,
-        answer: answerText,
-        difficulty: 'medium'
-      }];
+        return {
+          id: index,
+          question: questionText,
+          answer: answerText,
+          difficulty: 'medium'
+        };
+      }).filter(card => card.question !== "No question found");
 
-      setCards(generatedCards);
+      // Shuffle the cards for randomized order
+      const shuffledCards = [...generatedCards].sort(() => Math.random() - 0.5);
+      setCards(shuffledCards);
+      
+      // Load history from localStorage
+      const savedHistory = localStorage.getItem('flashcardHistory');
+      if (savedHistory) {
+        setCardHistory(JSON.parse(savedHistory));
+      }
     }
   }, [notes]);
 
@@ -52,7 +65,21 @@ const Flashcards = ({ notes, onBack }) => {
   };
 
   const rateCard = (rating) => {
-    // Here you could implement spaced repetition logic
+    const currentCard = cards[currentCardIndex];
+    const newHistoryEntry = {
+      cardId: currentCard.id,
+      question: currentCard.question,
+      answer: currentCard.answer,
+      rating: rating,
+      timestamp: new Date().toISOString()
+    };
+    
+    const updatedHistory = [...cardHistory, newHistoryEntry];
+    setCardHistory(updatedHistory);
+    
+    // Save to localStorage
+    localStorage.setItem('flashcardHistory', JSON.stringify(updatedHistory));
+    
     console.log(`Card ${currentCardIndex} rated: ${rating}`);
     nextCard();
   };
@@ -130,23 +157,29 @@ const Flashcards = ({ notes, onBack }) => {
             ← Previous
           </button>
 
-          <div className="flashcard-rating">
-            <span>How well did you know this?</span>
-            <div className="rating-buttons">
-              <button onClick={() => rateCard('again')} className="btn-rating btn-rating--again">
-                Again
-              </button>
-              <button onClick={() => rateCard('hard')} className="btn-rating btn-rating--hard">
-                Hard
-              </button>
-              <button onClick={() => rateCard('good')} className="btn-rating btn-rating--good">
-                Good
-              </button>
-              <button onClick={() => rateCard('easy')} className="btn-rating btn-rating--easy">
-                Easy
-              </button>
+          {isFlipped ? (
+            <div className="flashcard-rating">
+              <span>How well did you know this?</span>
+              <div className="rating-buttons">
+                <button onClick={() => rateCard('again')} className="btn-rating btn-rating--again">
+                  Again
+                </button>
+                <button onClick={() => rateCard('hard')} className="btn-rating btn-rating--hard">
+                  Hard
+                </button>
+                <button onClick={() => rateCard('good')} className="btn-rating btn-rating--good">
+                  Good
+                </button>
+                <button onClick={() => rateCard('easy')} className="btn-rating btn-rating--easy">
+                  Easy
+                </button>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="flashcard-rating">
+              <span className="text-gray-400 text-sm">Click the card to reveal answer</span>
+            </div>
+          )}
 
           <button
             onClick={nextCard}

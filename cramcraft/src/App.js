@@ -25,6 +25,7 @@ const App = () => {
   const [notes, setNotes] = useState('');
   const [selectedSession, setSelectedSession] = useState(null);
   const [notifications, setNotifications] = useState([]);
+  const [flashcards, setFlashcards] = useState([{ question: '', answer: '' }]);
 
   useEffect(() => {
     const init = async () => {
@@ -97,12 +98,19 @@ const App = () => {
   };
 
   const startStudySession = async () => {
-    if (!manualQuestion.trim() || !manualAnswer.trim()) {
-      setMessage('Please enter both a question and an answer!');
+    // Filter out empty flashcards
+    const validCards = flashcards.filter(card => card.question.trim() && card.answer.trim());
+    if (validCards.length === 0) {
+      setMessage('Please add at least one flashcard with both question and answer!');
       setTimeout(() => setMessage(''), 3000);
       return;
     }
-    const combinedContent = `Question: ${manualQuestion}\nAnswer: ${manualAnswer}`;
+    
+    // Combine all flashcards into notes format
+    const combinedContent = validCards.map((card, index) => 
+      `Question: ${card.question}\nAnswer: ${card.answer}`
+    ).join('\n\n---\n\n');
+    
     setNotes(combinedContent);
     setView('flashcards');
 
@@ -110,11 +118,28 @@ const App = () => {
       await supabase.from('study_sessions').insert([{ 
         user_id: session.user.id, 
         date: new Date().toISOString().split('T')[0], 
-        topic: manualQuestion.substring(0, 50), 
+        topic: validCards[0].question.substring(0, 50), 
         duration: 'Manual Entry', 
         notes: combinedContent 
       }]);
     } catch (err) { console.error(err); }
+  };
+
+  const addFlashcard = () => {
+    setFlashcards([...flashcards, { question: '', answer: '' }]);
+  };
+
+  const updateFlashcard = (index, field, value) => {
+    const updated = [...flashcards];
+    updated[index][field] = value;
+    setFlashcards(updated);
+  };
+
+  const removeFlashcard = (index) => {
+    if (flashcards.length > 1) {
+      const updated = flashcards.filter((_, i) => i !== index);
+      setFlashcards(updated);
+    }
   };
 
   const computeStreaks = (sessions) => {
@@ -190,24 +215,58 @@ const App = () => {
               {/* TOP: READY TO CRAFT */}
               <motion.div className="app-card app-card--dashboard app-card--full-width h-auto pb-6">
                 <h2 className="app-heading">Ready to Craft?</h2>
-                <div className="flex flex-col md:flex-row gap-4 mt-4">
-                  <div className="flex-1 text-left">
-                    <label className="block text-sm font-bold mb-2 text-gray-600">Front (Question)</label>
-                    <textarea value={manualQuestion} onChange={(e) => setManualQuestion(e.target.value)} className="w-full h-32 p-4 border-2 border-gray-200 rounded-xl focus:border-brand-teal outline-none transition-colors bg-white resize-none" placeholder="Question..." />
-                  </div>
-                  <div className="flex-1 text-left">
-                    <label className="block text-sm font-bold mb-2 text-gray-600">Back (Answer)</label>
-                    <textarea value={manualAnswer} onChange={(e) => setManualAnswer(e.target.value)} className="w-full h-32 p-4 border-2 border-gray-200 rounded-xl focus:border-brand-teal outline-none transition-colors bg-white resize-none" placeholder="Answer..." />
-                  </div>
+                <div className="flashcards-builder">
+                  {flashcards.map((card, index) => (
+                    <div key={index} className="flashcard-builder-item">
+                      <div className="flex justify-between items-center mb-2">
+                        <label className="block text-sm font-bold text-gray-600">Flashcard {index + 1}</label>
+                        {flashcards.length > 1 && (
+                          <button 
+                            onClick={() => removeFlashcard(index)} 
+                            className="btn-delete text-xs px-2 py-1"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex flex-col md:flex-row gap-4">
+                        <div className="flex-1 text-left">
+                          <label className="block text-xs font-bold mb-1 text-gray-500">Front (Question)</label>
+                          <textarea 
+                            value={card.question} 
+                            onChange={(e) => updateFlashcard(index, 'question', e.target.value)} 
+                            className="w-full h-24 p-3 border-2 border-gray-200 rounded-xl focus:border-brand-teal outline-none transition-colors bg-white resize-none text-sm" 
+                            placeholder="Question..." 
+                          />
+                        </div>
+                        <div className="flex-1 text-left">
+                          <label className="block text-xs font-bold mb-1 text-gray-500">Back (Answer)</label>
+                          <textarea 
+                            value={card.answer} 
+                            onChange={(e) => updateFlashcard(index, 'answer', e.target.value)} 
+                            className="w-full h-24 p-3 border-2 border-gray-200 rounded-xl focus:border-brand-teal outline-none transition-colors bg-white resize-none text-sm" 
+                            placeholder="Answer..." 
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
                 <div className="mt-6 flex justify-between items-center">
-                  <div className="flex-1 text-left">{message && <span className="text-sm font-medium text-brand-teal">{message}</span>}</div>
+                  <div className="flex items-center gap-4">
+                    <button onClick={addFlashcard} className="btn btn-secondary text-sm px-4 py-2">
+                      + Add Another
+                    </button>
+                    {message && <span className="text-sm font-medium text-brand-teal">{message}</span>}
+                  </div>
                   <div className="flex items-center gap-4">
                     <label className="btn btn-secondary text-sm px-4 py-2 cursor-pointer">
                       Upload File
                       <input type="file" accept=".pdf,.txt" onChange={handleFileUpload} style={{ display: 'none' }} />
                     </label>
-                    <button onClick={startStudySession} className="btn-primary">Start Session →</button>
+                    <button onClick={startStudySession} className="btn-primary">
+                      Done crafting, let's cram! →
+                    </button>
                   </div>
                 </div>
               </motion.div>
