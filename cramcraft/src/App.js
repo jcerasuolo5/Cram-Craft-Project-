@@ -26,6 +26,9 @@ const App = () => {
   const [selectedSession, setSelectedSession] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [flashcards, setFlashcards] = useState([{ question: '', answer: '' }]);
+  const [showAddTestModal, setShowAddTestModal] = useState(false);
+  const [selectedTestDate, setSelectedTestDate] = useState(null);
+  const [testFlashcards, setTestFlashcards] = useState([{ question: '', answer: '' }]);
 
   useEffect(() => {
     const init = async () => {
@@ -139,6 +142,92 @@ const App = () => {
     if (flashcards.length > 1) {
       const updated = flashcards.filter((_, i) => i !== index);
       setFlashcards(updated);
+    }
+  };
+
+  // Test date handlers
+  const addTestDate = async () => {
+    if (!newTestDate || !newTestSubject) {
+      setMessage('Please enter both a date and subject!');
+      setTimeout(() => setMessage(''), 3000);
+      return;
+    }
+    
+    // Get valid flashcards from the test flashcards form
+    const validCards = testFlashcards.filter(card => card.question.trim() && card.answer.trim());
+    const notesContent = validCards.length > 0 
+      ? validCards.map((card, index) => `Question: ${card.question}\nAnswer: ${card.answer}`).join('\n\n---\n\n')
+      : '';
+
+    try {
+      await supabase.from('test_dates').insert([{ 
+        user_id: session.user.id, 
+        date: newTestDate, 
+        subject: newTestSubject,
+        notes: notesContent
+      }]);
+      
+      setNewTestDate('');
+      setNewTestSubject('');
+      setTestFlashcards([{ question: '', answer: '' }]);
+      setShowAddTestModal(false);
+      fetchDashboardData();
+    } catch (err) { 
+      console.error(err); 
+      setMessage('Failed to add test date');
+      setTimeout(() => setMessage(''), 3000);
+    }
+  };
+
+  const deleteTestDate = async (id) => {
+    try {
+      await supabase.from('test_dates').delete().eq('id', id);
+      fetchDashboardData();
+    } catch (err) { console.error(err); }
+  };
+
+  const openTestFlashcards = (testDate) => {
+    setSelectedTestDate(testDate);
+    if (testDate.notes) {
+      // Parse existing notes into flashcards
+      const cardSections = testDate.notes.split('---').map(s => s.trim()).filter(s => s);
+      if (cardSections.length > 0 && cardSections[0]) {
+        const parsedCards = cardSections.map(section => {
+          const questionMatch = section.match(/Question: ([\s\S]*?)\nAnswer:/);
+          const answerMatch = section.match(/Answer: ([\s\S]*)/);
+          return {
+            question: questionMatch ? questionMatch[1].trim() : '',
+            answer: answerMatch ? answerMatch[1].trim() : ''
+          };
+        }).filter(card => card.question);
+        
+        if (parsedCards.length > 0) {
+          setNotes(testDate.notes);
+          setView('flashcards');
+          return;
+        }
+      }
+    }
+    // If no notes, open the input view with test date context
+    setNotes('');
+    setFlashcards([{ question: '', answer: '' }]);
+    setView('input');
+  };
+
+  const updateTestFlashcard = (index, field, value) => {
+    const updated = [...testFlashcards];
+    updated[index][field] = value;
+    setTestFlashcards(updated);
+  };
+
+  const addTestFlashcard = () => {
+    setTestFlashcards([...testFlashcards, { question: '', answer: '' }]);
+  };
+
+  const removeTestFlashcard = (index) => {
+    if (testFlashcards.length > 1) {
+      const updated = testFlashcards.filter((_, i) => i !== index);
+      setTestFlashcards(updated);
     }
   };
 
@@ -287,8 +376,43 @@ const App = () => {
               </motion.div>
 
               <motion.div className="app-card app-card--calendar">
-                <h3 className="text-lg font-bold mb-2">Study Calendar</h3>
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="text-lg font-bold">Study Calendar</h3>
+                  <button 
+                    onClick={() => setShowAddTestModal(true)} 
+                    className="btn btn-secondary text-xs px-3 py-1"
+                  >
+                    + Add Test
+                  </button>
+                </div>
                 <Calendar />
+                {testDates.length > 0 && (
+                  <div className="test-dates-list mt-4">
+                    <h4 className="text-sm font-bold mb-2">Upcoming Tests</h4>
+                    {testDates.map((test) => (
+                      <div 
+                        key={test.id} 
+                        className="test-date-item cursor-pointer hover:bg-gray-100"
+                        onClick={() => openTestFlashcards(test)}
+                      >
+                        <div className="flex-1">
+                          <span className="font-bold text-sm">{test.subject}</span>
+                          <span className="block text-xs text-gray-500">{test.date}</span>
+                          {test.notes && (
+                            <span className="text-xs text-brand-teal">📚 Has flashcards</span>
+                          )}
+                        </div>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); deleteTestDate(test.id); }} 
+                          className="btn-delete text-xs"
+                          title="Delete test"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </motion.div>
 
               <motion.div className="app-card app-card--sessions h-64 overflow-y-auto">
@@ -315,6 +439,87 @@ const App = () => {
             <p><strong>Date:</strong> {selectedSession.date}</p>
             <pre className="whitespace-pre-wrap text-sm mt-4">{selectedSession.notes}</pre>
             <button onClick={() => setSelectedSession(null)} className="btn btn-secondary mt-4">Close</button>
+          </div>
+        </div>
+      )}
+
+      {showAddTestModal && (
+        <div className="modal-overlay" onClick={() => setShowAddTestModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h3>Add Test Date</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-bold mb-1">Test Date</label>
+                <input 
+                  type="date" 
+                  value={newTestDate} 
+                  onChange={(e) => setNewTestDate(e.target.value)} 
+                  className="w-full p-2 border-2 border-gray-200 rounded-xl"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold mb-1">Subject</label>
+                <input 
+                  type="text" 
+                  value={newTestSubject} 
+                  onChange={(e) => setNewTestSubject(e.target.value)} 
+                  placeholder="e.g., Math Final, Biology Midterm"
+                  className="w-full p-2 border-2 border-gray-200 rounded-xl"
+                />
+              </div>
+              
+              <div className="mt-4">
+                <label className="block text-sm font-bold mb-2">Create Flashcards (Optional)</label>
+                <div className="flashcards-builder">
+                  {testFlashcards.map((card, index) => (
+                    <div key={index} className="flashcard-builder-item">
+                      <div className="flex justify-between items-center mb-2">
+                        <label className="block text-xs font-bold text-gray-600">Card {index + 1}</label>
+                        {testFlashcards.length > 1 && (
+                          <button 
+                            onClick={() => removeTestFlashcard(index)} 
+                            className="btn-delete text-xs px-2 py-1"
+                          >
+                            ×
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <input 
+                          type="text" 
+                          value={card.question} 
+                          onChange={(e) => updateTestFlashcard(index, 'question', e.target.value)} 
+                          placeholder="Question..."
+                          className="w-full p-2 border border-gray-200 rounded-lg text-sm"
+                        />
+                        <input 
+                          type="text" 
+                          value={card.answer} 
+                          onChange={(e) => updateTestFlashcard(index, 'answer', e.target.value)} 
+                          placeholder="Answer..."
+                          className="w-full p-2 border border-gray-200 rounded-lg text-sm"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <button 
+                  onClick={addTestFlashcard} 
+                  className="btn btn-secondary text-xs mt-2"
+                >
+                  + Add Another Card
+                </button>
+              </div>
+            </div>
+            
+            <div className="mt-4 flex gap-2">
+              <button onClick={addTestDate} className="btn-primary flex-1">
+                Save Test
+              </button>
+              <button onClick={() => setShowAddTestModal(false)} className="btn btn-secondary">
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}
