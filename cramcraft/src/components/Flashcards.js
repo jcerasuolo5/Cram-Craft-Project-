@@ -1,12 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 
-const Flashcards = ({ notes, onBack }) => {
+const Flashcards = ({ notes, onBack, onSessionComplete }) => {
   const [cards, setCards] = useState([]);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
   const [isFlipped, setIsFlipped] = useState(false);
   const [cardHistory, setCardHistory] = useState([]);
+  const [sessionStartTime] = useState(new Date());
+  const [isSessionComplete, setIsSessionComplete] = useState(false);
+  const [sessionStats, setSessionStats] = useState({ easy: 0, good: 0, hard: 0, again: 0 });
+  const timerRef = useRef(null);
+  const [elapsedTime, setElapsedTime] = useState(0);
 
   // Generate flashcards from notes (supports multiple cards)
   useEffect(() => {
@@ -43,6 +48,27 @@ const Flashcards = ({ notes, onBack }) => {
     }
   }, [notes]);
 
+  // Timer effect for session duration
+  useEffect(() => {
+    if (!isSessionComplete) {
+      timerRef.current = setInterval(() => {
+        setElapsedTime(Math.floor((new Date() - sessionStartTime) / 1000));
+      }, 1000);
+    }
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, [isSessionComplete, sessionStartTime]);
+
+  // Format time as MM:SS
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
   const nextCard = () => {
     if (currentCardIndex < cards.length - 1) {
       setCurrentCardIndex(currentCardIndex + 1);
@@ -77,11 +103,36 @@ const Flashcards = ({ notes, onBack }) => {
     const updatedHistory = [...cardHistory, newHistoryEntry];
     setCardHistory(updatedHistory);
     
+    // Update session stats
+    setSessionStats(prev => ({
+      ...prev,
+      [rating]: (prev[rating] || 0) + 1
+    }));
+    
     // Save to localStorage
     localStorage.setItem('flashcardHistory', JSON.stringify(updatedHistory));
     
     console.log(`Card ${currentCardIndex} rated: ${rating}`);
-    nextCard();
+    
+    // Check if this was the last card
+    if (currentCardIndex === cards.length - 1) {
+      // Session complete - show finished screen
+      setIsSessionComplete(true);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+      // Call the callback to update progress in parent
+      if (onSessionComplete) {
+        onSessionComplete({
+          ...sessionStats,
+          [rating]: (sessionStats[rating] || 0) + 1,
+          duration: formatTime(elapsedTime),
+          totalCards: cards.length
+        });
+      }
+    } else {
+      nextCard();
+    }
   };
 
   if (cards.length === 0) {
@@ -104,6 +155,129 @@ const Flashcards = ({ notes, onBack }) => {
   }
 
   const currentCard = cards[currentCardIndex];
+
+  // Finished screen component
+  const renderFinishedScreen = () => {
+    const totalCards = sessionStats.easy + sessionStats.good + sessionStats.hard + sessionStats.again;
+    
+    return (
+      <motion.div
+        className="app-card"
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.5 }}
+        style={{ maxWidth: '500px', margin: '0 auto', textAlign: 'center' }}
+      >
+        <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🎉</div>
+        <h2 className="app-heading" style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Session Complete!</h2>
+        <p style={{ color: '#64748b', marginBottom: '2rem' }}>Great job completing your study session</p>
+        
+        {/* Session Stats */}
+        <div style={{ 
+          background: '#f8fafc', 
+          borderRadius: '1rem', 
+          padding: '1.5rem', 
+          marginBottom: '1.5rem' 
+        }}>
+          <h3 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '1rem', color: '#1e293b' }}>
+            Session Summary
+          </h3>
+          
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(2, 1fr)', 
+            gap: '1rem',
+            marginBottom: '1.5rem'
+          }}>
+            <div style={{ 
+              background: 'white', 
+              padding: '1rem', 
+              borderRadius: '0.5rem',
+              border: '1px solid #e2e8f0'
+            }}>
+              <div style={{ fontSize: '2rem', fontWeight: '800', color: '#10b981' }}>
+                {sessionStats.easy}
+              </div>
+              <div style={{ fontSize: '0.875rem', color: '#64748b' }}>Easy</div>
+            </div>
+            
+            <div style={{ 
+              background: 'white', 
+              padding: '1rem', 
+              borderRadius: '0.5rem',
+              border: '1px solid #e2e8f0'
+            }}>
+              <div style={{ fontSize: '2rem', fontWeight: '800', color: '#3b82f6' }}>
+                {sessionStats.good}
+              </div>
+              <div style={{ fontSize: '0.875rem', color: '#64748b' }}>Good</div>
+            </div>
+            
+            <div style={{ 
+              background: 'white', 
+              padding: '1rem', 
+              borderRadius: '0.5rem',
+              border: '1px solid #e2e8f0'
+            }}>
+              <div style={{ fontSize: '2rem', fontWeight: '800', color: '#f59e0b' }}>
+                {sessionStats.hard}
+              </div>
+              <div style={{ fontSize: '0.875rem', color: '#64748b' }}>Hard</div>
+            </div>
+            
+            <div style={{ 
+              background: 'white', 
+              padding: '1rem', 
+              borderRadius: '0.5rem',
+              border: '1px solid #e2e8f0'
+            }}>
+              <div style={{ fontSize: '2rem', fontWeight: '800', color: '#ef4444' }}>
+                {sessionStats.again}
+              </div>
+              <div style={{ fontSize: '0.875rem', color: '#64748b' }}>Again</div>
+            </div>
+          </div>
+          
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            alignItems: 'center',
+            gap: '0.5rem',
+            padding: '1rem',
+            background: 'white',
+            borderRadius: '0.5rem',
+            border: '1px solid #e2e8f0'
+          }}>
+            <span style={{ fontSize: '1.5rem' }}>⏱️</span>
+            <div>
+              <div style={{ fontSize: '1.5rem', fontWeight: '800', color: '#1e293b' }}>
+                {formatTime(elapsedTime)}
+              </div>
+              <div style={{ fontSize: '0.875rem', color: '#64748b' }}>Total Time</div>
+            </div>
+          </div>
+        </div>
+        
+        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+          <button 
+            onClick={onBack}
+            className="btn btn-secondary"
+          >
+            Back to Dashboard
+          </button>
+        </div>
+      </motion.div>
+    );
+  };
+
+  // If session is complete, show finished screen
+  if (isSessionComplete) {
+    return (
+      <div className="app-page app-page--flashcards">
+        {renderFinishedScreen()}
+      </div>
+    );
+  }
 
   return (
     <div className="app-page app-page--flashcards">

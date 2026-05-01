@@ -29,6 +29,10 @@ const App = () => {
   const [showAddTestModal, setShowAddTestModal] = useState(false);
   const [selectedTestDate, setSelectedTestDate] = useState(null);
   const [testFlashcards, setTestFlashcards] = useState([{ question: '', answer: '' }]);
+  const [setTitle, setSetTitle] = useState('');
+  const [linkedTestDateId, setLinkedTestDateId] = useState(null);
+  const [savedSets, setSavedSets] = useState([]);
+  const [editingSetId, setEditingSetId] = useState(null);
 
   useEffect(() => {
     const init = async () => {
@@ -98,6 +102,14 @@ const App = () => {
       .select('*')
       .eq('user_id', session.user.id);
     setTestDates(dates || []);
+
+    // Fetch saved flashcard sets
+    const { data: sets } = await supabase
+      .from('flashcard_sets')
+      .select('*')
+      .eq('user_id', session.user.id)
+      .order('created_at', { ascending: false });
+    setSavedSets(sets || []);
   };
 
   const startStudySession = async () => {
@@ -116,16 +128,132 @@ const App = () => {
     
     setNotes(combinedContent);
     setView('flashcards');
+  };
 
+  // Save current flashcard set for later use
+  const saveFlashcardSet = async () => {
+    const validCards = flashcards.filter(card => card.question.trim() && card.answer.trim());
+    if (validCards.length === 0) {
+      setMessage('Please add at least one flashcard with both question and answer!');
+      setTimeout(() => setMessage(''), 3000);
+      return;
+    }
+    
+    const combinedContent = validCards.map((card, index) => 
+      `Question: ${card.question}\nAnswer: ${card.answer}`
+    ).join('\n\n---\n\n');
+    
+    const title = setTitle || `Set ${savedSets.length + 1}`;
+    
+    try {
+      if (editingSetId) {
+        // Update existing set
+        await supabase.from('flashcard_sets').update({
+          title: title,
+          notes: combinedContent,
+          test_date_id: linkedTestDateId,
+          updated_at: new Date().toISOString()
+        }).eq('id', editingSetId);
+        setMessage('Set updated!');
+      } else {
+        // Create new set
+        await supabase.from('flashcard_sets').insert([{
+          user_id: session.user.id,
+          title: title,
+          notes: combinedContent,
+          test_date_id: linkedTestDateId
+        }]);
+        setMessage('Set saved!');
+      }
+      setTimeout(() => setMessage(''), 3000);
+      fetchDashboardData();
+      // Clear form after saving
+      setSetTitle('');
+      setLinkedTestDateId(null);
+      setEditingSetId(null);
+    } catch (err) {
+      console.error('Failed to save set:', err);
+      setMessage('Failed to save set');
+      setTimeout(() => setMessage(''), 3000);
+    }
+  };
+
+  // Load a saved flashcard set into the editor
+  const loadFlashcardSet = (set) => {
+    // Parse the notes back into flashcards
+    const cardSections = set.notes.split('---').map(s => s.trim()).filter(s => s);
+    const parsedCards = cardSections.map(section => {
+      const questionMatch = section.match(/Question: ([\s\S]*?)\nAnswer:/);
+      const answerMatch = section.match(/Answer: ([\s\S]*)/);
+      return {
+        question: questionMatch ? questionMatch[1].trim() : '',
+        answer: answerMatch ? answerMatch[1].trim() : ''
+      };
+    }).filter(card => card.question);
+    
+    if (parsedCards.length > 0) {
+      setFlashcards(parsedCards);
+      setSetTitle(set.title || '');
+      setLinkedTestDateId(set.test_date_id);
+      setEditingSetId(set.id);
+      setNotes(set.notes);
+    }
+  };
+
+  // Delete a saved flashcard set
+  const deleteFlashcardSet = async (id) => {
+    try {
+      await supabase.from('flashcard_sets').delete().eq('id', id);
+      fetchDashboardData();
+    } catch (err) {
+      console.error('Failed to delete set:', err);
+    }
+  };
+
+  // Clear the editor form
+  const clearEditor = () => {
+    setFlashcards([{ question: '', answer: '' }]);
+    setSetTitle('');
+    setLinkedTestDateId(null);
+    setEditingSetId(null);
+    setNotes('');
+  };
+
+  // Handle session completion - save to database and update UI
+  const handleSessionComplete = async (sessionStats) => {
+    if (!session?.user?.id) return;
+    
+    // Use set title if provided, otherwise use first card question as topic
+    const validCards = flashcards.filter(card => card.question.trim() && card.answer.trim());
+    const topic = setTitle || (validCards.length > 0 ? validCards[0].question.substring(0, 50) : 'Study Session');
+    
+    // Create stats summary
+    const statsSummary = `Easy: ${sessionStats.easy || 0}, Good: ${sessionStats.good || 0}, Hard: ${sessionStats.hard || 0}, Again: ${sessionStats.again || 0}`;
+    
     try {
       await supabase.from('study_sessions').insert([{ 
         user_id: session.user.id, 
         date: new Date().toISOString().split('T')[0], 
-        topic: validCards[0].question.substring(0, 50), 
-        duration: 'Manual Entry', 
-        notes: combinedContent 
+        topic: topic, 
+        duration: sessionStats.duration || 'Unknown', 
+        notes: notes,
+        easy_count: sessionStats.easy || 0,
+        good_count: sessionStats.good || 0,
+        hard_count: sessionStats.hard || 0,
+        again_count: sessionStats.again || 0,
+        total_cards: sessionStats.totalCards || 0,
+        test_date_id: linkedTestDateId
       }]);
-    } catch (err) { console.error(err); }
+    } catch (err) { 
+      console.error('Failed to save session:', err); 
+    }
+    
+    // Refresh dashboard data to show updated progress
+    fetchDashboardData();
+    
+    // Clear the form after session completes
+    setSetTitle('');
+    setLinkedTestDateId(null);
   };
 
   const addFlashcard = () => {
@@ -304,6 +432,38 @@ const App = () => {
               {/* TOP: READY TO CRAFT */}
               <motion.div className="app-card app-card--dashboard app-card--full-width h-auto pb-6">
                 <h2 className="app-heading">Ready to Craft?</h2>
+                
+                {/* Set Title and Test Date Linking */}
+                <div className="mb-6 p-4 bg-gray-50 rounded-xl border border-gray-200">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-bold mb-2 text-gray-700">Set Title (Optional)</label>
+                      <input 
+                        type="text" 
+                        value={setTitle} 
+                        onChange={(e) => setSetTitle(e.target.value)} 
+                        placeholder="e.g., Biology Chapter 5, Spanish Vocab"
+                        className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-brand-teal outline-none transition-colors bg-white text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold mb-2 text-gray-700">Link to Test Date (Optional)</label>
+                      <select 
+                        value={linkedTestDateId || ''} 
+                        onChange={(e) => setLinkedTestDateId(e.target.value || null)}
+                        className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-brand-teal outline-none transition-colors bg-white text-sm"
+                      >
+                        <option value="">No test date linked</option>
+                        {testDates.map((test) => (
+                          <option key={test.id} value={test.id}>
+                            {test.subject} - {test.date}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                
                 <div className="flashcards-builder">
                   {flashcards.map((card, index) => (
                     <div key={index} className="flashcard-builder-item">
@@ -349,6 +509,12 @@ const App = () => {
                     {message && <span className="text-sm font-medium text-brand-teal">{message}</span>}
                   </div>
                   <div className="flex items-center gap-4">
+                    <button onClick={clearEditor} className="btn btn-ghost text-sm px-4 py-2">
+                      Clear
+                    </button>
+                    <button onClick={saveFlashcardSet} className="btn btn-secondary text-sm px-4 py-2">
+                      {editingSetId ? 'Update Set' : 'Save Set'}
+                    </button>
                     <label className="btn btn-secondary text-sm px-4 py-2 cursor-pointer">
                       Upload File
                       <input type="file" accept=".pdf,.txt" onChange={handleFileUpload} style={{ display: 'none' }} />
@@ -359,6 +525,48 @@ const App = () => {
                   </div>
                 </div>
               </motion.div>
+
+              {/* SAVED SETS SECTION */}
+              {savedSets.length > 0 && (
+                <motion.div className="app-card app-card--dashboard app-card--full-width h-auto pb-6">
+                  <h2 className="app-heading">Saved Sets</h2>
+                  <div className="saved-sets-grid">
+                    {savedSets.map((set) => (
+                      <div key={set.id} className="saved-set-item">
+                        <div className="flex justify-between items-start mb-2">
+                          <h4 className="font-bold text-sm truncate flex-1">{set.title || 'Untitled Set'}</h4>
+                          <div className="flex gap-2 ml-2">
+                            <button 
+                              onClick={() => loadFlashcardSet(set)} 
+                              className="text-xs text-brand-teal hover:underline"
+                            >
+                              Load
+                            </button>
+                            <button 
+                              onClick={() => {
+                                setNotes(set.notes);
+                                setView('flashcards');
+                              }} 
+                              className="text-xs text-brand-teal hover:underline"
+                            >
+                              Study
+                            </button>
+                            <button 
+                              onClick={() => deleteFlashcardSet(set.id)} 
+                              className="text-xs text-red-500 hover:underline"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                        <p className="text-xs text-gray-500">
+                          {set.notes.split('---').length} cards • {new Date(set.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
 
               {/* BOTTOM ROW: STATS, CALENDAR, SESSIONS */}
               <motion.div className="app-card app-card--stats">
@@ -527,7 +735,7 @@ const App = () => {
       {view === 'flashcards' && (
         <div className="app-page">
           <button onClick={() => setView('input')} className="btn btn-ghost mb-4">← Back to Dashboard</button>
-          <Flashcards notes={notes} onBack={() => setView('input')} />
+          <Flashcards notes={notes} onBack={() => { setView('input'); fetchDashboardData(); }} onSessionComplete={handleSessionComplete} />
         </div>
       )}
     </>
