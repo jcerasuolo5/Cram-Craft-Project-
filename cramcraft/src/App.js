@@ -369,7 +369,34 @@ const App = () => {
     const file = e.target.files[0];
     if (!file) return;
     setMessage('Processing file...');
-    // PDF/Text logic remains the same as your original snippet
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await fetch('http://localhost:3001/upload-file', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        throw new Error(`${response.status} ${response.statusText}: ${errorBody}`);
+      }
+
+      const data = await response.json();
+      const extractedFlashcards = data.flashcards;
+
+      if (extractedFlashcards.length > 0) {
+        setFlashcards(extractedFlashcards);
+        setMessage(`Successfully extracted ${extractedFlashcards.length} flashcards!`);
+      } else {
+        setMessage('No questions and answers found in the file. Please check the format.');
+      }
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      setMessage(`Error processing file: ${error.message}`);
+    }
   };
 
   return (
